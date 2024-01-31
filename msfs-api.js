@@ -1,25 +1,29 @@
-import {
-  RawBuffer,
-  SimConnectPeriod,
-  SimConnectConstants,
-  open,
-  Protocol,
-} from "node-simconnect";
+"use strict";
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.SystemEvents = exports.MSFS_NOT_CONNECTED = exports.MSFS_API = void 0;
+Object.defineProperty(exports, "loadAirportDB", {
+  enumerable: true,
+  get: function () {
+    return _airports.loadAirportDB;
+  }
+});
+var _nodeSimconnect = require("node-simconnect");
+var _index = require("./simvars/index.js");
+var _index2 = require("./system-events/index.js");
+var _exceptions = require("./exceptions.js");
+var _airports = require("./special/airports.js");
 // imports used by the API
-import { SimVars } from "./simvars/index.js";
-import { SystemEvents as SysEvents } from "./system-events/index.js";
-import { SIMCONNECT_EXCEPTION } from "./exceptions.js";
 
 // Special import for working with airport data
-import { AirportEvents, getAirportHandler } from "./special/airports.js";
 
 // export the airport db function, so other code can work with it directly.
-export { loadAirportDB } from "./special/airports.js";
 
-export const SystemEvents = Object.assign({}, SysEvents, AirportEvents);
-export const MSFS_NOT_CONNECTED = `Not connected to MSFS`;
-const codeSafe = (string) => string.replaceAll(` `, `_`);
+const SystemEvents = exports.SystemEvents = Object.assign({}, _index2.SystemEvents, _airports.AirportEvents);
+const MSFS_NOT_CONNECTED = exports.MSFS_NOT_CONNECTED = `Not connected to MSFS`;
+const codeSafe = string => string.replaceAll(` `, `_`);
 
 /**
  * API:
@@ -29,7 +33,7 @@ const codeSafe = (string) => string.replaceAll(` `, `_`);
  * - get(...propNames)
  * - set(propName, value)
  */
-export class MSFS_API {
+class MSFS_API {
   constructor(appName = "MSFS API") {
     this.appName = appName;
 
@@ -40,29 +44,32 @@ export class MSFS_API {
     this.id = 1;
     this.reserved = new Set();
   }
-
   async connect(opts = {}) {
     opts.autoReconnect ??= false;
     opts.retries ??= 0;
     opts.retryInterval ??= 2;
     opts.onConnect ??= () => {};
     opts.onRetry ??= () => {};
-    const { host, port } = opts;
+    const {
+      host,
+      port
+    } = opts;
     try {
-      const remote = (this.remote = host
-        ? { host, port: port ?? 500 }
-        : undefined);
-      const { handle } = await open(this.appName, Protocol.KittyHawk, remote);
+      const remote = this.remote = host ? {
+        host,
+        port: port ?? 500
+      } : undefined;
+      const {
+        handle
+      } = await (0, _nodeSimconnect.open)(this.appName, _nodeSimconnect.Protocol.KittyHawk, remote);
       if (!handle) throw new Error(`No connection handle to MSFS`);
       this.handle = handle;
       this.connected = true;
-      handle.on("event", (event) => this.handleSystemEvent(event));
+      handle.on("event", event => this.handleSystemEvent(event));
       handle.on("close", () => opts.autoReconnect && this.connect(opts));
-      handle.on("exception", (e) =>
-        opts.onException?.(SIMCONNECT_EXCEPTION[e.exception])
-      );
+      handle.on("exception", e => opts.onException?.(_exceptions.SIMCONNECT_EXCEPTION[e.exception]));
       // special non-simconnect handling
-      this.specialGetHandlers = [await getAirportHandler(this, handle)];
+      this.specialGetHandlers = [await (0, _airports.getAirportHandler)(this, handle)];
       // Signal that we're done
       opts.onConnect(handle);
     } catch (err) {
@@ -73,7 +80,6 @@ export class MSFS_API {
       } else throw new Error(`No connection to MSFS`);
     }
   }
-
   nextId() {
     if (this.id > 900) {
       this.id = 0;
@@ -85,7 +91,6 @@ export class MSFS_API {
     this.reserved.add(id);
     return id;
   }
-
   releaseId(id) {
     this.reserved.delete(id);
   }
@@ -94,7 +99,9 @@ export class MSFS_API {
   // because MSFS does not follow the JS "register multiple handlers"
   // concept. That's up to you. So.... that's where this code comes in:
   addEventListener(eventName, eventHandler) {
-    const { eventListeners: e } = this;
+    const {
+      eventListeners: e
+    } = this;
     if (!e[eventName]) {
       const eventID = this.nextId();
       this.handle.subscribeToSystemEvent(eventID, eventName);
@@ -102,7 +109,7 @@ export class MSFS_API {
         eventID,
         eventName,
         data: undefined,
-        handlers: [eventHandler],
+        handlers: [eventHandler]
       };
       e[eventID] = e[eventName];
     }
@@ -110,30 +117,31 @@ export class MSFS_API {
     // do we need to send the most recently known value?
     else {
       e[eventName].handlers.push(eventHandler);
-      const { data } = e[eventName];
+      const {
+        data
+      } = e[eventName];
       if (data) eventHandler(data);
     }
   }
-
   removeEventListener(eventName, eventHandler) {
-    const { eventListeners: e } = this;
+    const {
+      eventListeners: e
+    } = this;
     const obj = e[eventName];
-    const pos = obj.handlers.findIndex((h) => h === eventHandler);
+    const pos = obj.handlers.findIndex(h => h === eventHandler);
     if (pos > -1) obj.handlers.splice(pos, 1);
   }
-
   handleSystemEvent(event) {
-    const { clientEventId: eventID, data } = event;
+    const {
+      clientEventId: eventID,
+      data
+    } = event;
     const entry = this.eventListeners[eventID];
-
     if (!entry) {
-      return console.error(
-        `handling data for id ${eventID} without an event handler entry??`
-      );
+      return console.error(`handling data for id ${eventID} without an event handler entry??`);
     }
-
     entry.data = data;
-    entry.handlers.forEach((handle) => handle(data));
+    entry.handlers.forEach(handle => handle(data));
   }
 
   /**
@@ -152,7 +160,9 @@ export class MSFS_API {
       console.trace();
       return;
     }
-    const { name: eventName } = eventDefinition;
+    const {
+      name: eventName
+    } = eventDefinition;
     this.addEventListener(eventName, eventHandler);
     return () => this.off(eventName, eventHandler);
   }
@@ -174,16 +184,15 @@ export class MSFS_API {
    */
   trigger(triggerName, value = 0) {
     if (!this.connected) throw new Error(MSFS_NOT_CONNECTED);
-    const { handle } = this;
+    const {
+      handle
+    } = this;
     const eventID = this.nextId();
     handle.mapClientEventToSimEvent(eventID, triggerName);
     try {
-      handle.transmitClientEvent(
-        SimConnectConstants.OBJECT_ID_USER,
-        eventID,
-        value,
-        1, // highest priority
-        16 // group id is priority
+      handle.transmitClientEvent(_nodeSimconnect.SimConnectConstants.OBJECT_ID_USER, eventID, value, 1,
+      // highest priority
+      16 // group id is priority
       );
     } catch (e) {
       console.warn(e);
@@ -197,7 +206,9 @@ export class MSFS_API {
    * @param {*} defs
    */
   addDataDefinitions(DATA_ID, propNames, defs) {
-    const { handle } = this;
+    const {
+      handle
+    } = this;
     propNames.forEach((propName, pos) => {
       const def = defs[pos];
       if (def === undefined) {
@@ -205,14 +216,7 @@ export class MSFS_API {
         this.releaseId(DATA_ID);
         throw new Error(`Cannot get SimVar: "${propName}" unknown.`);
       }
-      handle.addToDataDefinition(
-        DATA_ID,
-        propName,
-        def.units,
-        def.data_type,
-        0.0,
-        SimConnectConstants.UNUSED
-      );
+      handle.addToDataDefinition(DATA_ID, propName, def.units, def.data_type, 0.0, _nodeSimconnect.SimConnectConstants.UNUSED);
     });
   }
 
@@ -225,9 +229,14 @@ export class MSFS_API {
    * @returns
    */
   generateGetPromise(DATA_ID, REQUEST_ID, propNames, defs) {
-    const { handle } = this;
+    const {
+      handle
+    } = this;
     return new Promise((resolve, _reject) => {
-      const handleDataRequest = ({ requestID, data }) => {
+      const handleDataRequest = ({
+        requestID,
+        data
+      }) => {
         if (requestID === REQUEST_ID) {
           handle.off("simObjectData", handleDataRequest);
           handle.clearDataDefinition(DATA_ID);
@@ -240,13 +249,7 @@ export class MSFS_API {
         }
       };
       handle.on("simObjectData", handleDataRequest);
-      handle.requestDataOnSimObject(
-        REQUEST_ID,
-        DATA_ID,
-        SimConnectConstants.OBJECT_ID_USER,
-        SimConnectPeriod.ONCE,
-        ...[0, 0, 0, 0]
-      );
+      handle.requestDataOnSimObject(REQUEST_ID, DATA_ID, _nodeSimconnect.SimConnectConstants.OBJECT_ID_USER, _nodeSimconnect.SimConnectPeriod.ONCE, ...[0, 0, 0, 0]);
     });
   }
 
@@ -258,10 +261,9 @@ export class MSFS_API {
    */
   get(...propNames) {
     if (!this.connected) throw new Error(MSFS_NOT_CONNECTED);
-
     const DATA_ID = this.nextId();
     const REQUEST_ID = DATA_ID;
-    propNames = propNames.map((s) => s.replaceAll(`_`, ` `));
+    propNames = propNames.map(s => s.replaceAll(`_`, ` `));
     // see if this is a special, non-simconnect variable:
     if (propNames.length === 1) {
       const [propName] = propNames;
@@ -272,7 +274,7 @@ export class MSFS_API {
       }
     }
     // if not, regular lookup.
-    const defs = propNames.map((propName) => SimVars[propName]);
+    const defs = propNames.map(propName => _index.SimVars[propName]);
     this.addDataDefinitions(DATA_ID, propNames, defs);
     return this.generateGetPromise(DATA_ID, REQUEST_ID, propNames, defs);
   }
@@ -286,27 +288,29 @@ export class MSFS_API {
    */
   set(propName, value) {
     if (!this.connected) throw new Error(MSFS_NOT_CONNECTED);
-    const { handle } = this;
+    const {
+      handle
+    } = this;
     propName = propName.replaceAll(`_`, ` `);
     if (value == parseFloat(value)) {
       // Extremely intentionally use coercion to see if we're dealing with a number-as-string
       value = parseFloat(value);
     }
     const DATA_ID = this.nextId();
-    const def = SimVars[propName];
+    const def = _index.SimVars[propName];
     if (def === undefined) {
       this.releaseId(DATA_ID);
       throw new Error(`Cannot set SimVar: "${propName}" unknown.`);
     }
     const bufferLength = 100; // TODO: we probably want to allocate only as much buffer as we actually need
-    const buffer = def.write(new RawBuffer(bufferLength), value);
-    const payload = { buffer, arrayCount: 0, tagged: false };
+    const buffer = def.write(new _nodeSimconnect.RawBuffer(bufferLength), value);
+    const payload = {
+      buffer,
+      arrayCount: 0,
+      tagged: false
+    };
     handle.addToDataDefinition(DATA_ID, propName, def.units, def.data_type);
-    handle.setDataOnSimObject(
-      DATA_ID,
-      SimConnectConstants.OBJECT_ID_USER,
-      payload
-    );
+    handle.setDataOnSimObject(DATA_ID, _nodeSimconnect.SimConnectConstants.OBJECT_ID_USER, payload);
     // cleanup, with *plenty* of time for SimConnect to resolve the data object before clearing it out.
     setTimeout(() => {
       this.releaseId(DATA_ID);
@@ -328,6 +332,7 @@ export class MSFS_API {
       if (running) setTimeout(run, interval);
     };
     run();
-    return () => (running = false);
+    return () => running = false;
   }
 }
+exports.MSFS_API = MSFS_API;

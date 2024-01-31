@@ -1,12 +1,8 @@
-import {
-  SystemEvents,
-  MSFS_API,
-  MSFS_NOT_CONNECTED,
-  loadAirportDB,
-} from "../msfs-api.js";
-import { SimVars } from "../simvars/index.js";
+"use strict";
 
-const api = new MSFS_API();
+var _msfsApi = require("../msfs-api.js");
+var _index = require("../simvars/index.js");
+const api = new _msfsApi.MSFS_API();
 
 /**
  * ...docs go here...
@@ -14,35 +10,31 @@ const api = new MSFS_API();
 (async function tryConnect() {
   console.log(`Testing call prevention prior to connection`);
   await testAPriori();
-
   if (true) {
     console.log(`testing direct airport access`);
-    const airports = loadAirportDB();
+    const airports = (0, _msfsApi.loadAirportDB)();
     console.log(`${airports.length} airports loaded directly`);
 
     // find all airports near Denver
     const [lat, long] = [39.7642219, -105.0202604];
     const start = performance.now();
-    const denver = airports.filter((a) => {
-      const { latitude: y, longitude: x } = a;
+    const denver = airports.filter(a => {
+      const {
+        latitude: y,
+        longitude: x
+      } = a;
       return lat - 0.5 < y && y < lat + 0.5 && long - 0.5 < x && x < long + 0.5;
     });
     const end = performance.now();
-    console.log(
-      `found ${
-        denver.length
-      } airports found in a 1 arc degree rect around Denver in ${end - start}ms`
-    );
+    console.log(`found ${denver.length} airports found in a 1 arc degree rect around Denver in ${end - start}ms`);
   }
-
   console.log(`Awaiting connection`);
   api.connect({
     autoReconnect: true,
     retries: Infinity,
     retryInterval: 5,
     onConnect: connect,
-    onRetry: (_retries, interval) =>
-      console.log(`Connection failed: retrying in ${interval} seconds.`),
+    onRetry: (_retries, interval) => console.log(`Connection failed: retrying in ${interval} seconds.`)
   });
 })();
 
@@ -51,18 +43,14 @@ const api = new MSFS_API();
  */
 async function testAPriori() {
   try {
-    await Promise.all(
-      [`on`, `trigger`, `get`, `set`, `schedule`].map(async (fname) => {
-        try {
-          await api[fname](`the function input should not matter`);
-          throw new Error(
-            `"${fname}" was allowed through, despite there not being a connection yet.`
-          );
-        } catch (e) {
-          if (e.message !== MSFS_NOT_CONNECTED) throw e;
-        }
-      })
-    );
+    await Promise.all([`on`, `trigger`, `get`, `set`, `schedule`].map(async fname => {
+      try {
+        await api[fname](`the function input should not matter`);
+        throw new Error(`"${fname}" was allowed through, despite there not being a connection yet.`);
+      } catch (e) {
+        if (e.message !== _msfsApi.MSFS_NOT_CONNECTED) throw e;
+      }
+    }));
   } catch (e) {
     throw e;
   }
@@ -74,54 +62,47 @@ async function testAPriori() {
  */
 async function connect(handle) {
   console.log(`MSFS connected`);
-
-  const { CAMERA_STATE: camera } = await api.get(`CAMERA_STATE`);
+  const {
+    CAMERA_STATE: camera
+  } = await api.get(`CAMERA_STATE`);
   if (camera > 10) {
     throw new Error(`MSFS needs to be "in game" for the tests to run\n`);
   }
-
-  const pauseOff = api.on(SystemEvents.PAUSED, () => {
+  const pauseOff = api.on(_msfsApi.SystemEvents.PAUSED, () => {
     pauseOff();
     console.log(`sim paused`);
   });
-
-  const unpauseOff = api.on(SystemEvents.UNPAUSED, () => {
+  const unpauseOff = api.on(_msfsApi.SystemEvents.UNPAUSED, () => {
     unpauseOff();
     console.log(`sim unpaused`);
   });
-
-  const { ALL_AIRPORTS } = await api.get(`ALL_AIRPORTS`);
+  const {
+    ALL_AIRPORTS
+  } = await api.get(`ALL_AIRPORTS`);
   console.log(`${ALL_AIRPORTS.length} total airports on the planet`);
-
-  const { NEARBY_AIRPORTS } = await api.get(`NEARBY_AIRPORTS`);
+  const {
+    NEARBY_AIRPORTS
+  } = await api.get(`NEARBY_AIRPORTS`);
   console.log(`${NEARBY_AIRPORTS.length} airports in local reality bubble`);
-
   const radius = 10;
   const near = await api.get(`NEARBY_AIRPORTS:${radius}`);
   const nearList = near[`NEARBY_AIRPORTS:${radius}`];
-  console.log(
-    `${nearList.length} airports found within a ${radius}NM radius around the plane`
-  );
-
+  console.log(`${nearList.length} airports found within a ${radius}NM radius around the plane`);
   console.log(`getting ${NEARBY_AIRPORTS[0].icao}`);
   const airportData = await api.get(`AIRPORT:${NEARBY_AIRPORTS[0].icao}`);
   console.log(`result:`, JSON.stringify(airportData, null, 2));
-
-  api.on(SystemEvents.AIRPORTS_IN_RANGE, (data) => {
+  api.on(_msfsApi.SystemEvents.AIRPORTS_IN_RANGE, data => {
     console.log(`New in range:`, data);
   });
-
-  api.on(SystemEvents.AIRPORTS_OUT_OF_RANGE, (data) => {
+  api.on(_msfsApi.SystemEvents.AIRPORTS_OUT_OF_RANGE, data => {
     console.log(`Out of range:`, data);
   });
-
   try {
     console.log(`Quick "unknown var" test`);
     await api.get(`PLANE_LONGITUDE`, `NO_THANKS`);
   } catch (e) {
     if (e.message !== `Cannot get SimVar: "NO THANKS" unknown.`) throw e;
   }
-
   runTests(api);
 }
 
@@ -132,10 +113,8 @@ async function connect(handle) {
 async function runTests(api) {
   console.log(`Running sim variables tests`);
   await testSimVars(api);
-
   console.log(`Running sim events tests`);
   await testSimEvents(api);
-
   console.log(`Running interval test`);
   testInterval(api, () => {
     process.exit(0);
@@ -147,14 +126,12 @@ async function runTests(api) {
  * @param {*} api
  */
 async function testSimVars(api) {
-  const varKeys = Object.keys(SimVars);
-
+  const varKeys = Object.keys(_index.SimVars);
   for (let i = 0; i < varKeys.length; i++) {
     const key = varKeys[i];
     console.log(`[${i}] ${key}`);
     console.log(await api.get(key.replace(`:index`, `:1`)), `\n`);
   }
-
   console.log(`Tested ${varKeys.length} sim vars.`);
 }
 
@@ -178,16 +155,9 @@ async function testSimEvents(api) {
  * @param {*} done
  */
 function testInterval(api, done) {
-  const stop = api.schedule(
-    (data) => {
-      console.log(data);
-    },
-    500,
-    "RUDDER POSITION",
-    "PLANE LONGITUDE",
-    "PLANE LATITUDE"
-  );
-
+  const stop = api.schedule(data => {
+    console.log(data);
+  }, 500, "RUDDER POSITION", "PLANE LONGITUDE", "PLANE LATITUDE");
   setTimeout(() => {
     stop();
     done();

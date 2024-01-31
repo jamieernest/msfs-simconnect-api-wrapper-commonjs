@@ -5,6 +5,7 @@
   "main": "msfs-api.js",
   "type": "module",
   "dependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "node-simconnect": "^3.5.0"
   },
   "scripts": {
@@ -12,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Pomax/msfs-simconnect-api-wrapper.git"
+    "url": "git+https://github.com/jamieernest/msfs-simconnect-api-wrapper-commonjs.git"
   },
   "keywords": [
     "simconnect",
@@ -25,5 +26,10 @@
   "bugs": {
     "url": "https://github.com/Pomax/msfs-simconnect-api-wrapper/issues"
   },
-  "homepage": "https://github.com/Pomax/msfs-simconnect-api-wrapper#readme"
+  "homepage": "https://github.com/jamieernest/msfs-simconnect-api-wrapper-commonjs#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.23.9",
+    "@babel/core": "^7.23.9",
+    "@babel/preset-env": "^7.23.9"
+  }
 }

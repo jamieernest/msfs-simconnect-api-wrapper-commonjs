@@ -1,12 +1,15 @@
-import { define } from "./simvar-utils.js";
+"use strict";
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.WASMGaugeAPITokenVariables = void 0;
+var _simvarUtils = require("./simvar-utils.js");
 // data types
-import { Float64 } from "./simvar-utils.js";
 
 // data units
-import { Radians } from "./simvar-utils.js";
 
-export const WASMGaugeAPITokenVariables = {
-  "TRAILING EDGE FLAPS0 LEFT ANGLE": define(`TESTING`, Radians, Float64),
-  "TRAILING EDGE FLAPS0 RIGHT ANGLE": define(`TESTING`, Radians, Float64),
+const WASMGaugeAPITokenVariables = exports.WASMGaugeAPITokenVariables = {
+  "TRAILING EDGE FLAPS0 LEFT ANGLE": (0, _simvarUtils.define)(`TESTING`, _simvarUtils.Radians, _simvarUtils.Float64),
+  "TRAILING EDGE FLAPS0 RIGHT ANGLE": (0, _simvarUtils.define)(`TESTING`, _simvarUtils.Radians, _simvarUtils.Float64)
 };
