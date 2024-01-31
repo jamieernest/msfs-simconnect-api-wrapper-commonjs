@@ -3,7 +3,7 @@
   "version": "4.3.0",
   "description": "A convenient SimConnect API for playing with Microsoft Flight Simulator 2020",
   "main": "msfs-api.js",
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "node-simconnect": "^3.5.0"
